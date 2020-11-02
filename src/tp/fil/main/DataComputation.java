@@ -1,6 +1,8 @@
 package tp.fil.main;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -20,7 +22,11 @@ import org.eclipse.emf.ecore.resource.impl.ResourceSetImpl;
 import org.eclipse.emf.ecore.xmi.impl.EcoreResourceFactoryImpl;
 import org.eclipse.emf.ecore.xmi.impl.XMIResourceFactoryImpl;
 import org.eclipse.modisco.java.emf.JavaPackage;
+
+import com.google.common.collect.Lists;
+
 import org.eclipse.modisco.java.Model;
+import org.eclipse.modisco.java.PrimitiveType;
 //import org.eclipse.modisco.java.Package;
 //import org.eclipse.modisco.java.AbstractTypeDeclaration;
 //import org.eclipse.modisco.java.BodyDeclaration;
@@ -31,10 +37,10 @@ public class DataComputation {
 
 	private static Resource dataMetamodel;
 	private static EPackage dataPackage;
+	private static Resource javaModel;
 
 	public static void main(String[] args) {
 		try {
-			Resource javaModel;
 			Resource dataModel;
 
 			// Create and configure resource set
@@ -128,17 +134,42 @@ public class DataComputation {
 		List<EObject> fieldDeclarations = classDeclarationBodyDeclarations.stream()
 				.filter(dec -> dec.eClass().getName().equals("FieldDeclaration")).collect(Collectors.toList());
 
-		List<EObject> attributes = fieldDeclarations.stream().map(att -> {
-			String attName = DataComputation.<String>getEObjectProperty(
-					DataComputation.<List<EObject>>getEObjectProperty(att, "fragments").get(0), "name");
-
-			String attType = DataComputation.<String>getEObjectProperty(DataComputation
-					.<EObject>getEObjectProperty(DataComputation.<EObject>getEObjectProperty(att, "type"), "type"), "name");
-
-			return createModelClassInstance("Attribute", Map.of("name", attName, "type", attType));
-		}).collect(Collectors.toList());
+		List<EObject> attributes = new ArrayList<EObject>();
+		List<EObject> relations = new ArrayList<EObject>();
 		
+		for(EObject fieldDeclaration : fieldDeclarations ) {
+			EObject attType = DataComputation 
+					.<EObject>getEObjectProperty(DataComputation.<EObject>getEObjectProperty(fieldDeclaration, "type"), "type");
+	
+			String attTypeName = DataComputation.<String>getEObjectProperty(attType, "name");
+
+			boolean isClassDeclaration = attType.eClass().getName().equals("ClassDeclaration");
+			
+			boolean isClassDeclarationFromModelPackage = isClassDeclaration && DataComputation.<String>getEObjectProperty(DataComputation.<EObject>getEObjectProperty(attType, "package"), "name").equals("model");
+			
+			EClass primitiveTypeClass = (EClass) JavaPackage.eINSTANCE.getEClassifier("PrimitiveType");
+
+			
+			if(isClassDeclarationFromModelPackage) {
+				EObject newRelation = createModelClassInstance("Relation", Map.of("to", attTypeName, "multiple", false));
+				relations.add(newRelation);
+			} else if (primitiveTypeClass.isSuperTypeOf(attType.eClass()) || attTypeName.split("\\.").length == 1){				
+				String attName = DataComputation.<String>getEObjectProperty(
+						DataComputation.<List<EObject>>getEObjectProperty(fieldDeclaration, "fragments").get(0), "name");
+
+				EObject newAttribute = createModelClassInstance("Attribute", Map.of("name", attName, "type", attTypeName));
+				attributes.add(newAttribute);
+			}
+				
+				
+		}
+		
+		System.out.println(relations);
+		
+		classObjectProperties.put("relations", relations);
+	
 		classObjectProperties.put("attributes", attributes);
+		
 
 		EObject classObject = createModelClassInstance("Class", classObjectProperties);
 

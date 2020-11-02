@@ -5,8 +5,16 @@
 [template public generateHTML(model : Model)]
 [comment @main/]  
 [file ('PetStore_rendering.html', false, 'UTF-8')]
-	
-	[comment TO BE COMPLETED/]
+	[for (model : Model | model)]
+		<h2>[model.name/]</h2>
+
+		<div style="display: flex; flex-wrap: wrap; justify-content: space-between;">
+		[for (class: Class | model.classes)]
+			<img src="http://yuml.me/diagram/scruffy/class/['['/][class.name/]|[for (att: Attribute | class.attributes)]- [att.name/]: [att.type/];[/for]]" style="display: block;">
+		[/for]
+		</div>
+
+	[/for]
 
 [/file]
 [/template]
