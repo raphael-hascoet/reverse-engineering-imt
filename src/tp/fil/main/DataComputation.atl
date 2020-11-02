@@ -29,7 +29,7 @@ rule ClassDeclaration2Class {
 			name <- s.name,
 			attributes <- s.bodyDeclarations->select(d |
 				if d.oclIsTypeOf(Java!FieldDeclaration) then
-					d.fragments->select(f | f.oclIsTypeOf(Java!VariableDeclarationFragment))->first().name.indexOf('.')=(-1)
+					d.type.type.name.indexOf('.')=-1
 				else
 					false
 				endif
@@ -40,9 +40,21 @@ rule ClassDeclaration2Class {
 rule FieldDeclaration2Attribut{
 	from
 		s : Java!FieldDeclaration
-			(
-				if s.abstractTypeDeclaration.package.oclIsUndefined() then false else s.abstractTypeDeclaration.package.name = 'model'
-					and if s.abstractTypeDeclaration.package.package.oclIsUndefined() then false else s.abstractTypeDeclaration.package.package.name = 'petstore' endif
+			(	if s.type.oclIsUndefined()
+					then false
+				else if s.type.type.oclIsUndefined()
+					then false
+				else s.type.type.name.indexOf('.')=-1
+				endif endif
+				and
+				if s.abstractTypeDeclaration.package.oclIsUndefined() 
+					then false 
+				else s.abstractTypeDeclaration.package.name = 'model'
+					and 
+					if s.abstractTypeDeclaration.package.package.oclIsUndefined() 
+						then false 
+					else s.abstractTypeDeclaration.package.package.name = 'petstore' 
+					endif
 				endif
 			)
 	to
