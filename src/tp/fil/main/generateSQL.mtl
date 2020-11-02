@@ -5,8 +5,25 @@
 [template public generateSQL(model : Model)]
 [comment @main/] 
 [file ('PetStore_database.sql', false, 'UTF-8')]
-	
-	[comment TO BE COMPLETED/]
+[for (class : Class | model.classes)]
+CREATE TABLE [class.name/]
+{
+	[for (attribut : Attribute | class.attributes) separator(',\n\t')][attribut.name.toSnakeCase()/] [attribut.type.toSqlType()/][/for]
+}
 
+[/for]
 [/file]
 [/template]
+
+[query public toSnakeCase(s : String) : String =
+	s.replaceAll('([A-Z])', '_$1').toLowerCase()
+/]
+
+[query public toSqlType(t : String) : String =
+	if(t = 'String') then 'VARCHAR(30)'
+	else if(t = 'int' or t = 'double') then 'NUMERIC'
+	else if(t = 'BigDecimal') then 'BIGINT'
+	else if(t = 'boolean') then 'BOOL'
+	else t
+	endif endif endif endif
+/]
