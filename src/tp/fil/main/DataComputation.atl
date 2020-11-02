@@ -4,4 +4,50 @@
 module DataComputation;
 create OUT : Data from IN : Java;
 
--- TO BE COMPLETED
+rule Model2Model {
+	from
+		s : Java!Model
+	to
+		t : Data!Model (
+			name <- s.name,
+			classes <- Java!Package.allInstances()->select(p | p.name = 'model' and 
+				if p.package.oclIsUndefined() then false else p.package.name = 'petstore' endif
+			)->first().ownedElements
+		)
+}
+
+rule ClassDeclaration2Class {
+	from
+		s : Java!ClassDeclaration
+			(
+				if s.package.oclIsUndefined() then false else s.package.name = 'model' 
+					and if s.package.package.oclIsUndefined() then false else s.package.package.name = 'petstore' endif
+				endif
+			)
+	to
+		t : Data!Class (
+			name <- s.name,
+			attributes <- s.bodyDeclarations->select(d |
+				if d.oclIsTypeOf(Java!FieldDeclaration) then
+					d.fragments->select(f | f.oclIsTypeOf(Java!VariableDeclarationFragment))->first().name.indexOf('.')=(-1)
+				else
+					false
+				endif
+			)
+		)
+}
+
+rule FieldDeclaration2Attribut{
+	from
+		s : Java!FieldDeclaration
+			(
+				if s.abstractTypeDeclaration.package.oclIsUndefined() then false else s.abstractTypeDeclaration.package.name = 'model'
+					and if s.abstractTypeDeclaration.package.package.oclIsUndefined() then false else s.abstractTypeDeclaration.package.package.name = 'petstore' endif
+				endif
+			)
+	to
+		t : Data!Attribute (
+			name <- s.fragments->select(f | f.oclIsTypeOf(Java!VariableDeclarationFragment))->first().name,
+			type <- if s.type.oclIsUndefined() then '' else s.type.type.name endif
+		)
+}
